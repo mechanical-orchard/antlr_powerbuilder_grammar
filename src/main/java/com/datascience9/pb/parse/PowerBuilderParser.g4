@@ -139,7 +139,7 @@ function_body
    ;
 
 on_body
-   : ON identifier (DOT (CREATE | DESTROY) | OPEN | CLOSE)? SEMI? (statement SEMI?)* END ON
+   : ON (identifier_name COLONCOLON)? identifier_name (DOT (CREATE | DESTROY) | OPEN | CLOSE)? SEMI? (statement SEMI?)* END ON
    ;
 
 event_forward_decl
@@ -179,6 +179,7 @@ scope_modif
 
 expression
    : close_call_sub
+   | variable_name
    | value
    | function_call_statement
    | LCURLY expression (COMMA expression)*  RCURLY
@@ -283,6 +284,7 @@ statement
    | exit_statement
    | sql_statement
    | sql_commit_statement
+   | sql_rollback_statement
    | open_cursor_statement
    | prepare_sql_stateent
    | declare_cursor_statement
@@ -298,7 +300,7 @@ public_statement
 throw_statement : THROW expression;
 
 goto_statement
-: GOTO variable_name(statement SEMI?)* variable_name COLON (statement SEMI?)*
+: GOTO variable_name
 ;
 
 statement_sub
@@ -338,7 +340,7 @@ sql_statement
   ;
 
 sql_insert_statement
-  : INSERT INTO variable_name LPAREN variable_name (COMMA variable_name)* RPAREN VALUES LPAREN sql_values (COMMA sql_values)* RPAREN SEMI?
+  : INSERT ~(SEMI)+ SEMI?
   ;
 
 sql_values
@@ -347,20 +349,23 @@ sql_values
   ;
 
 sql_delete_statement
-  : DELETE FROM variable_name where_clause SEMI?
+  : DELETE ~(SEMI)+ SEMI?
   ;
 
 sql_select_statement
-  : (SELECT | SELECTBLOB) select_clause INTO bind_param (COMMA bind_param)* FROM variable_name (COMMA variable_name)*
-  where_clause? (USING variable_name)? SEMI?
+  : (SELECT | SELECTBLOB) ~(SEMI)+ SEMI?
   ;
 
 sql_update_statement
-  : (UPDATE | UPDATEBLOB) variable_name SET set_value (COMMA set_value)* where_clause?
+  : (UPDATE | UPDATEBLOB) ~(SEMI)+ SEMI?
+  ;
+
+ sql_rollback_statement
+  : ROLLBACK ~(SEMI)* SEMI?
   ;
 
  sql_connect_statement
-  : (CONNECT | DISCONNECT | ROLLBACK) (USING (SQLCA | identifier_name))? SEMI
+  : (CONNECT | DISCONNECT) ~(SEMI)+ SEMI?
   ;
 
 set_value
@@ -379,29 +384,29 @@ select_clause
   ;
 
 sql_commit_statement
-  : COMMIT USING? (SQLCA | variable_name)? SEMI?
+  : COMMIT ~(SEMI)* SEMI?
   ;
 
 execute_statement
-  : EXECUTE IMMEDIATE? (variable_name | value) SEMI?
-  | EXECUTE IMMEDIATE? bind_param (USING (SQLCA | variable_name))? SEMI
-  | EXECUTE DYNAMIC? identifier (USING DESCRIPTOR? (SQLCA | identifier))? SEMI?
+  : EXECUTE ~(SEMI)+ SEMI
+  | EXECUTE ~(SEMI)+ SEMI
+  | EXECUTE ~(SEMI)+ SEMI
   ;
 
 close_sql_statement
-  : CLOSE variable_name SEMI
+  : CLOSE ~(SEMI)+ SEMI
   ;
 
 declare_procedure_statement
-  : DECLARE variable_name DYNAMIC? PROCEDURE FOR variable_name SEMI?
+  : DECLARE ~(SEMI)+ SEMI?
   ;
 
 declare_cursor_statement
-  : DECLARE variable_name DYNAMIC? CURSOR FOR variable_name SEMI
+  : DECLARE ~(SEMI)+ SEMI
   ;
 
 open_cursor_statement
-  : OPEN DYNAMIC? variable_name (USING (DESCRIPTOR | identifier))? identifier? SEMI?
+  : OPEN ~(SEMI)+ SEMI?
   ;
 
 close_cursor_statement
@@ -409,12 +414,11 @@ close_cursor_statement
   ;
 
 fetch_into_statement
-  : FETCH variable_name INTO bind_param SEMI?
-  | FETCH identifier USING DESCRIPTOR? identifier SEMI?
+  : FETCH ~(SEMI)+ SEMI?
   ;
 
 prepare_sql_stateent
-  : PREPARE variable_name FROM bind_param USING (SQLCA | identifier_name) SEMI
+  : PREPARE ~(SEMI)+ SEMI?
   ;
 
 increment_decrement_statement
@@ -433,7 +437,7 @@ assignment_rhs
 
 describe_function_call
   : (identifier DOT)? DESCRIBE LPAREN expression_list? RPAREN
-  | DESCRIBE identifier INTO identifier
+  | DESCRIBE identifier INTO bind_param (COMMA bind_param)*
   ;
 
 assignment_statement
@@ -496,7 +500,7 @@ ancestor_function_call
   ;
 
 call_statement
-  : CALL variable_name (COLONCOLON (CREATE | DESTROY | OPEN | CLOSE | identifier))? SEMI?
+  : CALL (identifier_name TICK)? variable_name (COLONCOLON (CREATE | DESTROY | OPEN | CLOSE | identifier))? SEMI?
   ;
 
 super_call_statement
